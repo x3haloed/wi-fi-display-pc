@@ -23,16 +23,16 @@ namespace WiFiDisplayPc.Source
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         private struct WLAN_INTERFACE_INFO {
-            Guid InterfaceGuid;
-            char[] strInterfaceDescription;
-            WLAN_INTERFACE_STATE isState;
+            public Guid InterfaceGuid;
+            public char[] strInterfaceDescription;
+            public WLAN_INTERFACE_STATE isState;
         }
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         struct WLAN_INTERFACE_INFO_LIST {
-            int dwNumberOfItems;
-            int dwIndex;
-            WLAN_INTERFACE_INFO[] InterfaceInfo;
+            public int dwNumberOfItems;
+            public int dwIndex;
+            public WLAN_INTERFACE_INFO[] InterfaceInfo;
         }
         
         [DllImport("Wlanapi.dll")]
@@ -59,32 +59,46 @@ namespace WiFiDisplayPc.Source
             IntPtr ppInterfaceList = IntPtr.Zero;
             iSucces = WlanEnumInterfaces(phClientHandle, IntPtr.Zero, out ppInterfaceList);
 
-            int iNumberOfItems = Marshal.ReadInt32(ppInterfaceList, 0);
-            Console.WriteLine("WLAN_INTERFACE_INFO_LIST.dwNumberOfItems: {0}", iNumberOfItems);
-            int dwIndex = Marshal.ReadInt32(ppInterfaceList, 4);
-            Console.WriteLine("WLAN_INTERFACE_INFO_LIST.dwIndex: {0}", dwIndex);
+            WLAN_INTERFACE_INFO_LIST infoList = new WLAN_INTERFACE_INFO_LIST();
+
+            infoList.dwNumberOfItems = Marshal.ReadInt32(ppInterfaceList, 0);
+            Console.WriteLine("WLAN_INTERFACE_INFO_LIST.dwNumberOfItems: {0}", infoList.dwNumberOfItems);
+            infoList.dwIndex = Marshal.ReadInt32(ppInterfaceList, 4);
+            Console.WriteLine("WLAN_INTERFACE_INFO_LIST.dwIndex: {0}", infoList.dwIndex);
 
             int ifListStartOffset = 8;
             int ifListItemSize = 16 + 512 + 4; // Int32*4 + WCHAR[256] + Int32
-            for (int i = 0; i < iNumberOfItems; i++)
+            infoList.InterfaceInfo = new WLAN_INTERFACE_INFO[infoList.dwNumberOfItems];
+            for (int i = 0; i < infoList.dwNumberOfItems; i++)
             {
+                infoList.InterfaceInfo[i] = new WLAN_INTERFACE_INFO();
+
                 //Guid
-                UInt32 guid1 = (UInt32)Marshal.ReadInt32(ppInterfaceList, ifListStartOffset + (i * ifListItemSize) + 0);
-                UInt16 guid2 = (UInt16)Marshal.ReadInt16(ppInterfaceList, ifListStartOffset + (i * ifListItemSize) + 4);
-                UInt16 guid3 = (UInt16)Marshal.ReadInt16(ppInterfaceList, ifListStartOffset + (i * ifListItemSize) + 8);
-                UInt64 guid4 = (UInt64)Marshal.ReadInt64(ppInterfaceList, ifListStartOffset + (i * ifListItemSize) + 12);
-                Console.WriteLine("GUID: {0}-{1}-{2}-{3}", guid1, guid2, guid3, guid4);
+                int guid1 = (int)Marshal.ReadInt32(ppInterfaceList, ifListStartOffset + (i * ifListItemSize) + 0);
+                short guid2 = (short)Marshal.ReadInt16(ppInterfaceList, ifListStartOffset + (i * ifListItemSize) + 4);
+                short guid3 = (short)Marshal.ReadInt16(ppInterfaceList, ifListStartOffset + (i * ifListItemSize) + 8);
+                byte[] guid4 = new byte[8];
+
+                for (int j = 0; j < 8; j++)
+                {
+                    guid4[j] = (byte)Marshal.ReadByte(ppInterfaceList, ifListStartOffset + (i * ifListItemSize) + 12 + j);
+                }
+
+                infoList.InterfaceInfo[i].InterfaceGuid = new Guid(guid1, guid2, guid3, guid4);
+                Console.WriteLine("GUID: {0}", infoList.InterfaceInfo[i].InterfaceGuid.ToString());
+                
                 // description
                 byte[] p = new byte[512];
                 for (int j = 0; j < 512; j++)
                 {
                     p[j] = Marshal.ReadByte(ppInterfaceList, ifListStartOffset + 16 + (i * ifListItemSize) + j);
                 }
-                String sInterfaceDescription = Encoding.Unicode.GetString(p);
-                Console.WriteLine("Interface description: " + sInterfaceDescription);
+                infoList.InterfaceInfo[i].strInterfaceDescription = Encoding.Unicode.GetChars(p);
+                Console.WriteLine("Interface description: " + new String(infoList.InterfaceInfo[i].strInterfaceDescription));
+                
                 // state
-                Int32 iIsState = Marshal.ReadInt32(ppInterfaceList, ifListStartOffset + (i * ifListItemSize) + 16 + 512);
-                Console.WriteLine("Interface state: {0}", iIsState);
+                infoList.InterfaceInfo[i].isState = (WLAN_INTERFACE_STATE)Marshal.ReadInt32(ppInterfaceList, ifListStartOffset + (i * ifListItemSize) + 16 + 512);
+                Console.WriteLine("Interface state: {0}", infoList.InterfaceInfo[i].isState.ToString());
             }
 
 
