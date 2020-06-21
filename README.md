@@ -5,4 +5,4 @@ An application that implements the Wi-Fi Display specification for mirroring a P
 
 While the application will not be certified as Miracast compatible, the goal is to get the application working with as many Miracast certified devices as possible.
 
-This application is in the very early stages of development. Contributors are welcome. Please contact me if you are interested in contributing.
+NOTE: Development has ceased on this project, and it's not useable in its current state.
